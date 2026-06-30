@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # 1. Local Database for Testing (Optional but recommended)
+  db:
+    image: postgres:15-alpine
+    container_name: test-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: authdb
+    ports:
+      - "5432:5432"
+
+  # 2. Eureka (The Brain)
+  service-registry:
+    build:
+      context: ../backend/service-registry
+    container_name: test-eureka
+    ports:
+      - "8761:8761"
+
+  # 3. Auth Service (Point it to your local DB)
+  auth-service:
+    build:
+      context: ../backend/auth-service
+    container_name: test-auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/authdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+    depends_on:
+      - db
+      - service-registry
+
+  # 4. API Gateway
+  api-gateway:
+    build:
+      context: ../backend/api-gateway
+    container_name: test-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+    depends_on:
+      - service-registry

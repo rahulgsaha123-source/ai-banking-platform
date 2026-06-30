@@ -1,0 +1,27 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: ai-service
+  ai:
+    openai:
+      # Put your actual Groq key here (or use an environment variable)
+      api-key: ${GROQ_API_KEY} 
+      # Point Spring AI to Groq's servers instead of OpenAI
+      base-url: https://api.groq.com/openai
+      chat:
+        options:
+          # Specify the Llama 3 8B model
+          model: llama-3.1-8b-instant
+          temperature: 0.7
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    # This ensures it registers as 127.0.0.1 instead of the weird hostname
+    instance-id: ${spring.cloud.client.ip-address}:${server.port}
+  
