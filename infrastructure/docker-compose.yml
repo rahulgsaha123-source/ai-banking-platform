@@ -150,6 +150,16 @@ services:
       - kafka
     networks:
       - banking-network
+  
+  ai-service:
+    build: ../backend/ai-service
+    ports:
+      - "8087:8087"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - GROQ_API_KEY=${GROQ_API_KEY} # This grabs the key from the server's .env file
+    depends_on:
+      - service-registry
 
 networks:
   banking-network:
