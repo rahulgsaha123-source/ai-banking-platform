@@ -103,4 +103,58 @@ public class BankingTools {
             }
         };
     }
+
+    // --- NEW TOOL: MONEY TRANSFER ---
+
+    // 1. DTOs to match your Payment Service JSON request and response
+    public record PaymentTransferRequest(String fromAccount, String toAccount, double amount) {}
+    public record PaymentTransferResponse(Long id, String referenceNumber, String fromAccount, String toAccount, double amount, String status, String createdAt) {}
+
+    // 2. DTOs for the AI to use
+    public record AiTransferRequest(String fromUsername, String toUsername, double amount) {}
+    public record AiTransferResult(String fromUsername, String toUsername, double amount, String status, String referenceNumber, String message) {}
+
+    // 3. The Smart Transfer Tool
+    @Bean
+    @Description("Transfer money from the authenticated user to a target user.")
+    public Function<AiTransferRequest, AiTransferResult> transferMoney(RestTemplate restTemplate) {
+        return request -> {
+            System.out.println("💸 AI is initiating TRANSFER from: '" + request.fromUsername() + "' to: '" + request.toUsername() + "' for ₹" + request.amount());
+            
+            try {
+                // STEP A: Translate the Sender's Username to Account Number
+                String fromUrl = "http://ACCOUNT-SERVICE/api/accounts/" + request.fromUsername();
+                AccountDto[] fromAccounts = restTemplate.getForObject(fromUrl, AccountDto[].class);
+                if (fromAccounts == null || fromAccounts.length == 0) {
+                     return new AiTransferResult(request.fromUsername(), request.toUsername(), request.amount(), "FAILED", null, "Sender account not found.");
+                }
+                String fromAccountNumber = fromAccounts[0].accountNumber();
+
+                // STEP B: Translate the Recipient's Username to Account Number
+                String toUrl = "http://ACCOUNT-SERVICE/api/accounts/" + request.toUsername();
+                AccountDto[] toAccounts = restTemplate.getForObject(toUrl, AccountDto[].class);
+                if (toAccounts == null || toAccounts.length == 0) {
+                     return new AiTransferResult(request.fromUsername(), request.toUsername(), request.amount(), "FAILED", null, "Recipient account not found.");
+                }
+                String toAccountNumber = toAccounts[0].accountNumber();
+
+                // STEP C: Fire the POST Request to the Payment Service!
+                String paymentUrl = "http://PAYMENT-SERVICE/api/payments/transfer";
+                PaymentTransferRequest paymentRequest = new PaymentTransferRequest(fromAccountNumber, toAccountNumber, request.amount());
+                
+                PaymentTransferResponse paymentResponse = restTemplate.postForObject(paymentUrl, paymentRequest, PaymentTransferResponse.class);
+                
+                if (paymentResponse != null && "SUCCESS".equals(paymentResponse.status())) {
+                    System.out.println("✅ Transfer Successful! Ref: " + paymentResponse.referenceNumber());
+                    return new AiTransferResult(request.fromUsername(), request.toUsername(), request.amount(), "SUCCESS", paymentResponse.referenceNumber(), "Transfer completed successfully.");
+                } else {
+                    return new AiTransferResult(request.fromUsername(), request.toUsername(), request.amount(), "FAILED", null, "Transfer was rejected by the payment service.");
+                }
+                
+            } catch (Exception e) {
+                System.out.println("❌ Error during transfer: " + e.getMessage());
+                return new AiTransferResult(request.fromUsername(), request.toUsername(), request.amount(), "ERROR", null, "An error occurred while processing the transfer.");
+            }
+        };
+    }
 }

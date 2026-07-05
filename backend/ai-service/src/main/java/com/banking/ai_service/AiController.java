@@ -25,21 +25,25 @@ public class AiController {
             @RequestParam(value = "question") String question,
             @RequestParam(value = "username", defaultValue = "unknown") String username) { // <-- We now accept the username!
 
-       String systemPrompt = String.format("""
+       // Notice we are injecting the username 5 times now!
+        String systemPrompt = String.format("""
                 You are a highly secure, professional AI Banking Assistant. 
                 The user you are currently speaking to is authenticated as: '%s'.
                 
                 SECURITY RULE 1: You are STRICTLY FORBIDDEN from accessing the account balance or transactions of ANY user other than '%s'.
-                RULE 2: If the user asks "What is my balance?" or does not specify an account ID, you MUST automatically use '%s' as the accountId when calling the getAccountBalance tool.
-                RULE 3: If the user asks about recent transactions, history, or spending, you MUST use the getRecentTransactions tool with accountId '%s'.
-                RULE 4: Present financial data clearly. Use the ₹ symbol for INR. List the amounts, types (like TRANSFER_IN), and remarks gracefully in a bulleted list.
-                """, username, username, username, username); // <-- 4 usernames injected now!
+                RULE 2: If the user asks for their balance, automatically use '%s' as the accountId.
+                RULE 3: If the user asks about recent transactions, use the getRecentTransactions tool with accountId '%s'.
+                RULE 4: If the user asks to send or transfer money, you MUST use the transferMoney tool.
+                        - ALWAYS use '%s' as the 'fromUsername'.
+                        - Extract the recipient's username and the amount from the user's message.
+                RULE 5: When a transfer is successful, provide the user with the Reference Number and the amount transferred using the ₹ symbol.
+                """, username, username, username, username, username); 
 
         return chatClient.prompt()
                 .system(systemPrompt)
                 .user(question)
-                // Add the new tool here!
-                .functions("getAccountBalance", "getRecentTransactions") 
+                // Add the third superpower here!
+                .functions("getAccountBalance", "getRecentTransactions", "transferMoney") 
                 .call()
                 .content();
     }
