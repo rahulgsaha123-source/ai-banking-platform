@@ -166,7 +166,23 @@ services:
       - service-registry
     networks:
       - banking-network
-
+  document-service:
+    build:
+      context: ../backend/document-service
+      dockerfile: Dockerfile
+    container_name: banking-document-service
+    ports:
+      - "8088:8088"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=ap-south-1
+    networks:
+      - banking-network
+    depends_on:
+      - service-registry
 networks:
   banking-network:
     driver: bridge
