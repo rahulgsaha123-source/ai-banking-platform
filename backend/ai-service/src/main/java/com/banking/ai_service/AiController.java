@@ -1,34 +1,36 @@
 package com.banking.ai_service;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/ai") // This works perfectly with the Gateway's StripPrefix=1
+@RequestMapping("/ai")
 public class AiController {
 
     private final ChatClient chatClient;
 
     public AiController(ChatClient.Builder chatClientBuilder) {
-        this.chatClient = chatClientBuilder.build();
+        // 1. We give the AI a "Brain" so it remembers previous messages in the conversation!
+        this.chatClient = chatClientBuilder
+                .defaultAdvisors(new MessageChatMemoryAdvisor(new InMemoryChatMemory()))
+                .build();
     }
 
     @GetMapping("/ask")
-    public String askAI(@RequestParam(value = "question", defaultValue = "Say hello to my new banking app!") String question) {
+    public String askAI(@RequestParam(value = "question", defaultValue = "Say hello!") String question) {
         return chatClient.prompt()
-                // 1. Give the AI its identity and fallback instructions (using account 'a')
-                .system("You are a professional, friendly AI Banking Assistant. When a user asks about their balance, you MUST use the getAccountBalance tool to fetch it. If the user doesn't provide an account ID, assume their username is 'a'. Keep your responses helpful and concise.")
-                
-                // 2. Pass in the actual question from your React frontend
+                // 2. We give it stricter rules so it stops stalling and just gives the data
+                .system("You are a highly efficient, direct AI Banking Assistant. " +
+                        "RULE 1: When a user asks for a balance, ALWAYS use the getAccountBalance tool immediately. " +
+                        "RULE 2: If the user doesn't specify an account, default to account 'a'. " +
+                        "RULE 3: Once you receive the data from the tool, you MUST immediately tell the user the balance amount. Do not stall, do not loop, and do not ask if they want to see it.")
                 .user(question)
-                
-                // 3. Give the AI permission to use the tool you built in BankingTools.java
-                .functions("getAccountBalance") 
-                
-                // 4. Execute the call to Llama 3 / Groq
+                .functions("getAccountBalance")
                 .call()
                 .content();
     }
