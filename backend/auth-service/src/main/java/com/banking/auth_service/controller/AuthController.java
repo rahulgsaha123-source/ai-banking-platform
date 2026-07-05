@@ -67,7 +67,6 @@ public class AuthController {
         User user = optionalUser.get();
 
         // Step B: Verify the password
-        // .matches() compares the raw text password to the hashed database password securely
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: Invalid email or password!");
         }
@@ -75,8 +74,11 @@ public class AuthController {
         // Step C: Generate the JWT token
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // Step D: Return the token in a JSON response
-        return ResponseEntity.ok(Map.of("token", token));
+        // Step D: Return BOTH the token and the username in the JSON response!
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "username", user.getUsername()
+        ));
     }
 
     @GetMapping("/test-security")
