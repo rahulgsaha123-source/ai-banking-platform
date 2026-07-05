@@ -59,6 +59,10 @@ spring:
             - Path=/api/ai/**
           filters:
             - StripPrefix=1
+        - id: document-service
+          uri: lb://DOCUMENT-SERVICE   # This must match the spring.application.name of your document service
+          predicates:
+            - Path=/api/documents/**
 
 eureka:
   client:
@@ -67,4 +71,4 @@ eureka:
   instance:
     # Forces the gateway to use IP instead of hostname
     prefer-ip-address: true
-    instance-id: ${spring.application.name}:${random.value}  
+    instance-id: ${spring.application.name}:${random.value}
