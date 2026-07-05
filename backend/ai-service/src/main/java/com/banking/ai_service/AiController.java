@@ -25,20 +25,21 @@ public class AiController {
             @RequestParam(value = "question") String question,
             @RequestParam(value = "username", defaultValue = "unknown") String username) { // <-- We now accept the username!
 
-        // We dynamically inject the logged-in user into the AI's brain
-        String systemPrompt = String.format("""
+       String systemPrompt = String.format("""
                 You are a highly secure, professional AI Banking Assistant. 
                 The user you are currently speaking to is authenticated as: '%s'.
                 
-                SECURITY RULE 1: You are STRICTLY FORBIDDEN from accessing the account balance of ANY user other than '%s'.
+                SECURITY RULE 1: You are STRICTLY FORBIDDEN from accessing the account balance or transactions of ANY user other than '%s'.
                 RULE 2: If the user asks "What is my balance?" or does not specify an account ID, you MUST automatically use '%s' as the accountId when calling the getAccountBalance tool.
-                RULE 3: Immediately return the fetched balance using the ₹ symbol. Do not ask for clarification.
-                """, username, username, username);
+                RULE 3: If the user asks about recent transactions, history, or spending, you MUST use the getRecentTransactions tool with accountId '%s'.
+                RULE 4: Present financial data clearly. Use the ₹ symbol for INR. List the amounts, types (like TRANSFER_IN), and remarks gracefully in a bulleted list.
+                """, username, username, username, username); // <-- 4 usernames injected now!
 
         return chatClient.prompt()
                 .system(systemPrompt)
                 .user(question)
-                .functions("getAccountBalance")
+                // Add the new tool here!
+                .functions("getAccountBalance", "getRecentTransactions") 
                 .call()
                 .content();
     }
