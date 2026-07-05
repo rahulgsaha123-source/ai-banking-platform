@@ -152,14 +152,20 @@ services:
       - banking-network
   
   ai-service:
-    build: ../backend/ai-service
+    build:
+      context: ../backend/ai-service
+    container_name: banking-ai-service
     ports:
       - "8087:8087"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
-      - GROQ_API_KEY=${GROQ_API_KEY} # This grabs the key from the server's .env file
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - EUREKA_INSTANCE_HOSTNAME=banking-ai-service
     depends_on:
       - service-registry
+    networks:
+      - banking-network
 
 networks:
   banking-network:
