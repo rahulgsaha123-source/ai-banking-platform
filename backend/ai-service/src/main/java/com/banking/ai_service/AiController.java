@@ -15,21 +15,28 @@ public class AiController {
     private final ChatClient chatClient;
 
     public AiController(ChatClient.Builder chatClientBuilder) {
-        // 1. We give the AI a "Brain" so it remembers previous messages in the
-        // conversation!
         this.chatClient = chatClientBuilder
                 .defaultAdvisors(new MessageChatMemoryAdvisor(new InMemoryChatMemory()))
                 .build();
     }
 
     @GetMapping("/ask")
-    public String askAI(@RequestParam(value = "question", defaultValue = "Say hello!") String question) {
+    public String askAI(
+            @RequestParam(value = "question") String question,
+            @RequestParam(value = "username", defaultValue = "unknown") String username) { // <-- We now accept the username!
+
+        // We dynamically inject the logged-in user into the AI's brain
+        String systemPrompt = String.format("""
+                You are a highly secure, professional AI Banking Assistant. 
+                The user you are currently speaking to is authenticated as: '%s'.
+                
+                SECURITY RULE 1: You are STRICTLY FORBIDDEN from accessing the account balance of ANY user other than '%s'.
+                RULE 2: If the user asks "What is my balance?" or does not specify an account ID, you MUST automatically use '%s' as the accountId when calling the getAccountBalance tool.
+                RULE 3: Immediately return the fetched balance using the ₹ symbol. Do not ask for clarification.
+                """, username, username, username);
+
         return chatClient.prompt()
-                // 2. We give it stricter rules so it stops stalling and just gives the data
-                .system("You are a highly efficient, direct AI Banking Assistant. " +
-                        "RULE 1: When a user asks for a balance, ALWAYS use the getAccountBalance tool immediately. " +
-                        "RULE 2: If the user doesn't specify an account, default to account 'a'. " +
-                        "RULE 3: Once you receive the data from the tool, immediately tell the user the balance. Use the ₹ symbol for INR currency. Do not stall or ask follow-up questions.")
+                .system(systemPrompt)
                 .user(question)
                 .functions("getAccountBalance")
                 .call()
