@@ -39,14 +39,14 @@ public class BankingTools {
                 // If we got a valid response, extract the balance from the first account in the array
                 if (accounts != null && accounts.length > 0) {
                     double realBalance = accounts[0].balance();
-                    return new BalanceResponse(request.accountId(), realBalance, "USD");
+                    return new BalanceResponse(request.accountId(), realBalance, "INR");
                 } else {
                     return new BalanceResponse(request.accountId(), 0.0, "ACCOUNT_NOT_FOUND");
                 }
                 
             } catch (Exception e) {
                 System.out.println("❌ Error fetching balance: " + e.getMessage());
-                return new BalanceResponse(request.accountId(), 0.0, "ERROR");
+                return new BalanceResponse(request.accountId(), 0.0, "INR");
             }
         };
     }
