@@ -27,6 +27,12 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
 eureka:
   client:
     service-url:

@@ -1,6 +1,12 @@
 server:
   port: 8761
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
 spring:
   application:
     name: service-registry

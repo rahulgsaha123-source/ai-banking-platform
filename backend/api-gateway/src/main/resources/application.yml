@@ -64,6 +64,12 @@ spring:
           predicates:
             - Path=/api/documents/**
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
 eureka:
   client:
     service-url:
