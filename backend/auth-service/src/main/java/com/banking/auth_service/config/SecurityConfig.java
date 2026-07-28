@@ -33,7 +33,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                   .requestMatchers("/auth/**").permitAll() 
+                   .requestMatchers("/auth/**", "/actuator/health", "/actuator/health/**", "/actuator/prometheus").permitAll() 
                    .anyRequest().authenticated()
             )
             // Add the filter specifically for authenticated requests

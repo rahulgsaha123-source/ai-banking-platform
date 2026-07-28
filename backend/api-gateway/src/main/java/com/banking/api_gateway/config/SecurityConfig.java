@@ -17,6 +17,7 @@ public class SecurityConfig {
         .authorizeExchange(exchanges -> exchanges
             // Only allow public access to these two specific endpoints
             .pathMatchers("/api/auth/register", "/api/auth/login").permitAll()
+            .pathMatchers("/actuator/health", "/actuator/health/**", "/actuator/prometheus").permitAll()
             
             // Force the Gateway to authenticate all other /api/auth/* requests
             .anyExchange().permitAll()
