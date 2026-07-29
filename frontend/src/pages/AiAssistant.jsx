@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiService } from '../services/aiService';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function AiAssistant() {
   const navigate = useNavigate();
@@ -42,15 +44,42 @@ function AiAssistant() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-md border border-gray-200">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[75%] p-3 rounded-lg ${msg.sender === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-300 rounded-bl-none shadow-sm'}`}>
-              <p className="whitespace-pre-wrap text-sm">{msg.text}</p>
+            <div className={`max-w-[85%] p-4 rounded-lg ${msg.sender === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-300 rounded-bl-none shadow-sm'}`}>
+              
+              {/* If it's the user, render standard text. If it's the AI, render Markdown! */}
+              {msg.sender === 'user' ? (
+                <p className="whitespace-pre-wrap text-sm">{msg.text}</p>
+              ) : (
+                <div className="text-sm"> {/* <--- Moved text-sm here! */}
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                      ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
+                      ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
+                      li: ({ node, ...props }) => <li className="ml-2" {...props} />,
+                      strong: ({ node, ...props }) => <strong className="font-bold text-gray-900" {...props} />,
+                      table: ({ node, ...props }) => (
+                        <div className="overflow-x-auto my-3">
+                          <table className="min-w-full divide-y divide-gray-200 border rounded-lg" {...props} />
+                        </div>
+                      ),
+                      th: ({ node, ...props }) => <th className="px-3 py-2 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider" {...props} />,
+                      td: ({ node, ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 border-t" {...props} />,
+                    }}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
+                </div>
+              )}
+
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex justify-start">
             <div className="bg-gray-200 text-gray-600 p-3 rounded-lg rounded-bl-none animate-pulse text-sm">
-              Typing...
+              Analyzing...
             </div>
           </div>
         )}
@@ -61,7 +90,7 @@ function AiAssistant() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about saving strategies, budgeting, etc..."
+          placeholder="Ask about your balance, recent transactions, or transfer funds..."
           className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={loading}
         />
