@@ -1,10 +1,19 @@
-// src/services/aiService.js
 import axiosClient from '../api/axiosClient';
 
 export const aiService = {
   askQuestion: async (question) => {
-    // This routes through your API Gateway (port 8080) to the ai-service (port 8087)
-    const response = await axiosClient.get(`/api/ai/ask?question=${encodeURIComponent(question)}`);
+    
+    // Grab the real logged-in user from the browser's memory!
+    // If they aren't logged in, it gracefully falls back to 'unknown'.
+    const currentUser = localStorage.getItem('username') || 'unknown'; 
+
+    const response = await axiosClient.get('/api/ai/ask', {
+      params: {
+        question: question,
+        username: currentUser // <--- Now it sends the REAL user to Java!
+      }
+    });
+    
     return response.data;
   }
 };

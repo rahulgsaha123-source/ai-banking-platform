@@ -1,3 +1,3 @@
-com\banking\ai_service\AiServiceApplication.class
 com\banking\ai_service\ServletInitializer.class
 com\banking\ai_service\AiController.class
+com\banking\ai_service\AiServiceApplication.class

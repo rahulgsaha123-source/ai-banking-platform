@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axiosClient from '../api/axiosClient';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
 import AccountManager from '../components/AccountManager';
 import { notificationService } from '../services/notificationService';
+import DocumentUpload from '../components/DocumentUpload';
 
 
 const CustomTooltip = ({ active, payload }) => {
@@ -32,6 +34,11 @@ function Dashboard() {
   const [filter, setFilter] = useState('ALL');
   const [unreadCount, setUnreadCount] = useState(notificationService.getUnreadCount());
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    navigate('/login');
+  };
 
   const downloadMiniStatement = () => {
     let content = `MINI STATEMENT - Account: ${accountData?.accountNumber}\nDate: ${new Date().toLocaleString()}\n------------------------------------------\n\n`;
@@ -155,7 +162,14 @@ function Dashboard() {
                   >
                     Ask AI Assistant ✨
                   </button>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                  >
+                    Logout
+                  </button>
                 </div>
+                
               </div>
               <div className="p-6 bg-green-50 border border-green-200 rounded-lg shadow-sm">
                 <h2 className="text-xl font-semibold text-green-800 mb-4 border-b pb-2">Account Profile</h2>
@@ -165,31 +179,77 @@ function Dashboard() {
                   <p><strong>Account No:</strong> {accountData?.accountNumber}</p>
                   <p><strong>Phone:</strong> {accountData?.customer?.phoneNumber}</p>
                 </div>
+                <DocumentUpload />
               </div>
             </div>
             <div className="mt-8">
-              <h2 className="text-2xl font-bold mb-4">Recent Transactions</h2>
+              <h2 className="text-2xl font-bold mb-4">Financial Overview</h2>
+
+              {transactions.length > 0 && (
+                <div className="h-64 w-full mb-8 bg-white p-4 border rounded-lg shadow-sm">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={[...transactions].reverse()}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey={(tx) => tx.timestamp || tx.transactionDate}
+                        tickFormatter={(tick) => new Date(tick).toLocaleDateString()}
+                        stroke="#6b7280"
+                        fontSize={12}
+                      />
+                      <YAxis
+                        domain={['auto', 'auto']}
+                        stroke="#6b7280"
+                        fontSize={12}
+                        tickFormatter={(tick) => `₹${tick}`}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="displayBalance"
+                        stroke="#2563eb"
+                        strokeWidth={3}
+                        fill="#3b82f6"
+                        fillOpacity={0.1}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
               <div className="mb-4 flex gap-2">
                 {['ALL', 'TRANSFER_IN', 'TRANSFER_OUT'].map(type => (
-                  <button key={type} onClick={() => setFilter(type)} className={`px-3 py-1 rounded text-sm ${filter === type ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                    {type}
+                  <button key={type} onClick={() => setFilter(type)} className={`px-3 py-1 rounded text-sm ${filter === type ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                    {type.replace('_', ' ')}
                   </button>
                 ))}
               </div>
-              <table className="w-full text-left bg-white border rounded-lg">
-                <thead className="bg-gray-50 border-b">
-                  <tr><th className="p-4 text-sm font-semibold text-gray-600">Date</th><th className="p-4 text-sm font-semibold text-gray-600">Type</th><th className="p-4 text-sm font-semibold text-gray-600">Amount</th></tr>
-                </thead>
-                <tbody>
-                  {transactions.filter(tx => filter === 'ALL' ? true : tx.transactionType === filter).map((tx, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-4 text-sm">{new Date(tx.timestamp || tx.transactionDate).toLocaleString()}</td>
-                      <td className="p-4 text-sm"><span className={`px-2 py-1 rounded-full text-xs ${tx.transactionType === 'TRANSFER_IN' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{tx.transactionType}</span></td>
-                      <td className="p-4 text-sm font-semibold">₹{tx.amount}</td>
+
+              <div className="overflow-hidden border rounded-lg shadow-sm">
+                <table className="w-full text-left bg-white">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="p-4 text-sm font-semibold text-gray-600">Date</th>
+                      <th className="p-4 text-sm font-semibold text-gray-600">Type</th>
+                      <th className="p-4 text-sm font-semibold text-gray-600 text-right">Amount</th>
+                      <th className="p-4 text-sm font-semibold text-gray-600 text-right">Running Balance</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {transactions.filter(tx => filter === 'ALL' ? true : tx.transactionType === filter).map((tx, index) => (
+                      <tr key={index} className="border-b hover:bg-gray-50 transition">
+                        <td className="p-4 text-sm text-gray-600">{new Date(tx.timestamp || tx.transactionDate).toLocaleString()}</td>
+                        <td className="p-4 text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${tx.transactionType === 'TRANSFER_IN' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {tx.transactionType}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm font-bold text-right text-gray-800">₹{tx.amount}</td>
+                        <td className="p-4 text-sm font-semibold text-right text-gray-500">₹{tx.displayBalance}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         )}

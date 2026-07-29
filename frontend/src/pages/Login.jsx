@@ -8,12 +8,17 @@ function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
+   
     e.preventDefault();
     try {
-      // Hits http://18.61.44.190:8080/api/auth/login via the Gateway
       const response = await axiosClient.post('/api/auth/login', formData);
       
+      // 1. Store the security token
       localStorage.setItem('token', response.data.token); 
+      
+      // 2. Store the REAL username provided by the database!
+      localStorage.setItem('username', response.data.username); 
+      
       alert('Login successful!');
       navigate('/dashboard'); 
     } catch (err) {
