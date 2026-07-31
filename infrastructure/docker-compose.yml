@@ -205,6 +205,14 @@ services:
     networks:
       - banking-network
 
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: banking-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - banking-network
+
 networks:
   banking-network:
     driver: bridge

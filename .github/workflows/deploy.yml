@@ -1,4 +1,4 @@
-name: CI/CD Pipeline to AWS EC2
+name: Staggered CI/CD Pipeline to AWS EC2
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy Services to EC2
+    name: Staggered Deploy to EC2
     runs-on: ubuntu-latest
 
     steps:
@@ -17,15 +17,85 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 120m # Increased to 2 hours to allow for sleep intervals
           script: |
-            echo "🚀 Connected to EC2! Pulling latest code..."
+            echo "🚀 Connected! Pulling latest code..."
             cd ~/ai-banking-platform
             git pull origin main
+            
+            echo "🧹 Clearing old Docker cache to free up disk space..."
+            sudo docker builder prune -a -f
+            
+            echo "📦 STEP 1: Compiling all services sequentially..."
+            cd ~/ai-banking-platform/backend/service-registry && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/api-gateway && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/auth-service && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/customer-service && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/account-service && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/payment-service && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/transaction-service && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/notification-service && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/ai-service && chmod +x mvnw && ./mvnw clean package -DskipTests
+            cd ~/ai-banking-platform/backend/document-service && chmod +x mvnw && ./mvnw clean package -DskipTests
 
-            echo "🐳 Rebuilding and restarting Docker containers..."
-            cd infrastructure
-
-            sudo docker compose up -d --build
-
+            echo "⏳ STEP 2: Staggered Docker Deployments (with 3-minute cool-downs)..."
+            cd ~/ai-banking-platform/infrastructure
+            
+            # Start the core infrastructure first (if not running)
+            sudo docker compose up -d postgres kafka zookeeper prometheus grafana zipkin
+            
+            # Note: I removed --no-cache to speed up your builds and save AWS disk space.
+            
+            echo "Deploying Service Registry..."
+            sudo docker compose build service-registry
+            sudo docker compose up -d service-registry
+            sleep 120 # Shorter wait for Eureka
+            
+            echo "Deploying Auth Service..."
+            sudo docker compose build auth-service
+            sudo docker compose up -d auth-service
+            sleep 300 # 5 minute cool-down
+            
+            echo "Deploying API Gateway..."
+            sudo docker compose build api-gateway
+            sudo docker compose up -d api-gateway
+            sleep 300
+            
+            echo "Deploying Payment Service..."
+            sudo docker compose build payment-service
+            sudo docker compose up -d payment-service
+            sleep 300
+            
+            echo "Deploying Notification Service..."
+            sudo docker compose build notification-service
+            sudo docker compose up -d notification-service
+            sleep 300
+            
+            echo "Deploying Transaction Service..."
+            sudo docker compose build transaction-service
+            sudo docker compose up -d transaction-service
+            sleep 300
+            
+            echo "Deploying Account Service..."
+            sudo docker compose build account-service
+            sudo docker compose up -d account-service
+            sleep 300
+            
+            echo "Deploying Customer Service..."
+            sudo docker compose build customer-service
+            sudo docker compose up -d customer-service
+            sleep 300
+            
+            echo "Deploying Document Service..."
+            sudo docker compose build document-service
+            sudo docker compose up -d document-service
+            sleep 300
+            
+            echo "Deploying AI Service..."
+            sudo docker compose build ai-service
+            sudo docker compose up -d ai-service
+            
+            echo "🧹 Final Cleanup..."
             sudo docker image prune -f
-            echo "✅ Deployment Successful!"
+            
+            echo "✅ Staggered Deployment Successful!"
